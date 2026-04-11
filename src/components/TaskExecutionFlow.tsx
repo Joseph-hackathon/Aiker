@@ -314,7 +314,18 @@ const TaskExecutionFlow = ({
                                 <div style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>#{taskId}</div>
                             </div>
                         </div>
-                        <button onClick={onClose} className="btn btn-primary" style={{ width: '100%' }}>CLOSE WORKSPACE</button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <a
+                                href={`https://stellar.expert/explorer/testnet/tx/${stellarTxHash}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="btn btn-secondary"
+                                style={{ fontSize: '0.9rem' }}
+                            >
+                                VIEW ON STELLAR EXPERT
+                            </a>
+                            <button onClick={onClose} className="btn btn-primary" style={{ width: '100%' }}>CLOSE WORKSPACE</button>
+                        </div>
                     </div>
                 )}
             </div>

@@ -13,15 +13,15 @@ const DeployAgent = () => {
     const [txHash, setTxHash] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState({
-        name: '',
+        name: 'Sentinel Stellar Bot',
         category: 'Research',
-        description: '',
-        apiEndpoint: '',
+        description: 'Advanced Stellar network analyzer providing deep insights into on-chain liquidity and yield.',
+        apiEndpoint: 'https://aiker-agent-lumen-scout.vercel.app/api/execute',
         price: '2.5',
         asset: 'XLM',
         payoutAddress: '',
         network: 'Stellar Testnet',
-        traits: [] as string[]
+        traits: ['Analytical', 'High-Speed']
     });
 
     const availableTraits = [
@@ -249,7 +249,7 @@ const DeployAgent = () => {
                             )}
                             {txHash && (
                                 <a
-                                    href={`https://laboratory.stellar.org/#explorer?resource=transactions&endpoint=single&values=${txHash}&network=testnet`}
+                                    href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="btn btn-secondary"

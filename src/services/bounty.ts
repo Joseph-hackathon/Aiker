@@ -3,6 +3,7 @@ import {
     Horizon,
     Networks,
     Operation,
+    Transaction,
     TransactionBuilder,
 } from '@stellar/stellar-sdk';
 import axios from 'axios';
@@ -83,6 +84,28 @@ const isLocal = typeof window !== 'undefined' &&
      window.location.hostname === '127.0.0.1' ||
      window.location.hostname.startsWith('192.168.'));
 
+const REGISTRY_STORAGE_KEY = 'aiker_onchain_agent_registry';
+
+/**
+ * Resolves an agent API endpoint by applying local proxy paths if in development mode.
+ */
+const resolveAgentEndpoint = (url: string): string => {
+    if (!isLocal) return url;
+    
+    // Auto-resolve known Vercel domains to local proxy paths
+    if (url.includes('aiker-agent-lumen-scout.vercel.app')) {
+        return url.replace('https://aiker-agent-lumen-scout.vercel.app', '/api-lumen');
+    }
+    if (url.includes('aiker-agent-stripe-settle.vercel.app')) {
+        return url.replace('https://aiker-agent-stripe-settle.vercel.app', '/api-stripe');
+    }
+    if (url.includes('aiker-agent-orbit.vercel.app')) {
+        return url.replace('https://aiker-agent-orbit.vercel.app', '/api-orbit');
+    }
+    
+    return url;
+};
+
 const MOCK_AGENTS: OnchainAgent[] = [
     {
         agentId: 1,
@@ -94,9 +117,7 @@ const MOCK_AGENTS: OnchainAgent[] = [
         payoutAddress: "GD...1",
         creator: "GD...1",
         completedTasks: 12,
-        apiEndpoint: isLocal 
-            ? "/api-lumen/api/execute" 
-            : "https://aiker-agent-lumen-scout.vercel.app/api/execute",
+        apiEndpoint: "https://aiker-agent-lumen-scout.vercel.app/api/execute",
         network: "Stellar Testnet",
         traits: ["Reliable", "Fast", "On-chain Expert"],
         active: true,
@@ -112,9 +133,7 @@ const MOCK_AGENTS: OnchainAgent[] = [
         payoutAddress: "GD...2",
         creator: "GD...2",
         completedTasks: 45,
-        apiEndpoint: isLocal 
-            ? "/api-stripe/api/execute" 
-            : "https://aiker-agent-stripe-settle.vercel.app/api/execute",
+        apiEndpoint: "https://aiker-agent-stripe-settle.vercel.app/api/execute",
         network: "Stellar Testnet",
         traits: ["Secure", "Compliant", "Multi-asset"],
         active: true,
@@ -130,9 +149,7 @@ const MOCK_AGENTS: OnchainAgent[] = [
         payoutAddress: "GD...3",
         creator: "GD...3",
         completedTasks: 8,
-        apiEndpoint: isLocal 
-            ? "/api-orbit/api/execute" 
-            : "https://aiker-agent-orbit.vercel.app/api/execute",
+        apiEndpoint: "https://aiker-agent-orbit.vercel.app/api/execute",
         network: "Stellar Testnet",
         traits: ["Insightful", "Detail-oriented", "Verifiable"],
         active: true,
@@ -141,16 +158,31 @@ const MOCK_AGENTS: OnchainAgent[] = [
 ];
 
 export const fetchOnchainAgents = async (): Promise<OnchainAgent[]> => {
-    // In a real implementation, this would call a Soroban contract
-    // For the hackathon demo, we use the mock registry
-    return MOCK_AGENTS;
+    // 1. Get static mock agents
+    const agents = [...MOCK_AGENTS];
+    
+    // 2. Load persistent agents from localStorage (simulating a Soroban state indexer)
+    if (typeof window !== 'undefined') {
+        try {
+            const stored = localStorage.getItem(REGISTRY_STORAGE_KEY);
+            if (stored) {
+                const registeredAgents: OnchainAgent[] = JSON.parse(stored);
+                return [...agents, ...registeredAgents];
+            }
+        } catch (error) {
+            console.error('Failed to parse local agent registry', error);
+        }
+    }
+    
+    return agents;
 };
 
 export const executeAgentWithX402 = async (request: AgentExecutionRequest): Promise<AgentExecutionResult> => {
-    console.log(`[X402] Executing ${request.agentName} via ${request.apiEndpoint}...`);
+    const apiEndpoint = resolveAgentEndpoint(request.apiEndpoint);
+    console.log(`[X402] Executing ${request.agentName} via ${apiEndpoint}...`);
     
     try {
-        const response = await axios.post(request.apiEndpoint, {
+        const response = await axios.post(apiEndpoint, {
             protocol: "aiker.agent-job.v2",
             agent: {
                 id: request.agentId,
@@ -172,7 +204,7 @@ export const executeAgentWithX402 = async (request: AgentExecutionRequest): Prom
             
             // Retry with proof
             console.log("[X402] Payment settled. Retrying request with proof:", txHash);
-            const retryResponse = await axios.post(request.apiEndpoint, {
+            const retryResponse = await axios.post(apiEndpoint, {
                 protocol: "aiker.agent-job.v2",
                 agent: { id: request.agentId, name: request.agentName },
                 task: request.taskBrief,
@@ -212,7 +244,8 @@ const performStellarPayment = async (destination: string, amount: string, assetT
     
     if (!signedXdr) throw new Error("Payment signature rejected.");
     
-    const result = await server.submitTransaction(tx);
+    const signedTransaction = new Transaction(signedXdr, Networks.TESTNET);
+    const result = await server.submitTransaction(signedTransaction);
     return result.hash;
 };
 
@@ -247,7 +280,8 @@ export const settleOnStellar = async (
     const signedXdr = await signStellarTransaction(tx.toXDR(), "TESTNET");
     if (!signedXdr) throw new Error("Settlement signature rejected.");
 
-    const result = await server.submitTransaction(tx);
+    const signedTransaction = new Transaction(signedXdr, Networks.TESTNET);
+    const result = await server.submitTransaction(signedTransaction);
     
     return {
         txHash: result.hash,
@@ -280,11 +314,43 @@ export const registerAgentOnStellar = async (agentData: any): Promise<{ txHash: 
     const signedXdr = await signStellarTransaction(tx.toXDR(), "TESTNET");
     if (!signedXdr) throw new Error("Registration signature rejected.");
 
-    const result = await server.submitTransaction(tx);
+    const signedTransaction = new Transaction(signedXdr, Networks.TESTNET);
+    const result = await server.submitTransaction(signedTransaction);
     
+    const agentId = Math.floor(Math.random() * 5000) + 100;
+    
+    // Persist metadata locally for the demo session (Real data simulation)
+    if (typeof window !== 'undefined') {
+        const newAgent: OnchainAgent = {
+            agentId,
+            name: agentData.name,
+            category: agentData.category,
+            description: agentData.description,
+            price: agentData.price,
+            asset: agentData.asset,
+            payoutAddress: agentData.payoutAddress,
+            creator: publicKey, // The user who registered it
+            completedTasks: 0,
+            apiEndpoint: agentData.apiEndpoint,
+            network: "Stellar Testnet",
+            traits: agentData.traits || [],
+            active: true,
+            createdAt: Date.now() / 1000,
+        };
+
+        try {
+            const stored = localStorage.getItem(REGISTRY_STORAGE_KEY);
+            const registry = stored ? JSON.parse(stored) : [];
+            registry.push(newAgent);
+            localStorage.setItem(REGISTRY_STORAGE_KEY, JSON.stringify(registry));
+        } catch (error) {
+            console.error('Failed to save agent to local registry', error);
+        }
+    }
+
     return {
         txHash: result.hash,
-        agentId: Math.floor(Math.random() * 5000) + 100,
+        agentId,
     };
 };
 
