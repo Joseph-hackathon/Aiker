@@ -90,9 +90,9 @@ const REGISTRY_STORAGE_KEY = 'aiker_onchain_agent_registry';
  * Resolves an agent API endpoint by applying local proxy paths if in development mode.
  */
 const resolveAgentEndpoint = (url: string): string => {
-    if (!isLocal) return url;
+    // We always apply proxy paths if it's a known agent domain.
+    // Locally (Vite) and in Production (Vercel), we have matching proxy configurations.
     
-    // Auto-resolve known Vercel domains to local proxy paths
     if (url.includes('aiker-agent-lumen-scout.vercel.app')) {
         return url.replace('https://aiker-agent-lumen-scout.vercel.app', '/api-lumen');
     }

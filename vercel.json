@@ -1,6 +1,18 @@
 {
   "rewrites": [
     {
+      "source": "/api-lumen/(.*)",
+      "destination": "https://aiker-agent-lumen-scout.vercel.app/$1"
+    },
+    {
+      "source": "/api-stripe/(.*)",
+      "destination": "https://aiker-agent-stripe-settle.vercel.app/$1"
+    },
+    {
+      "source": "/api-orbit/(.*)",
+      "destination": "https://aiker-agent-orbit.vercel.app/$1"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
