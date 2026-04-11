@@ -79,10 +79,6 @@ export interface AgentExecutionResult {
 }
 
 // Mock data for initial development - will be replaced by Soroban calls
-const isLocal = typeof window !== 'undefined' && 
-    (window.location.hostname === 'localhost' || 
-     window.location.hostname === '127.0.0.1' ||
-     window.location.hostname.startsWith('192.168.'));
 
 const REGISTRY_STORAGE_KEY = 'aiker_onchain_agent_registry';
 
