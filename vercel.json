@@ -1,16 +1,16 @@
 {
   "rewrites": [
     {
-      "source": "/api-lumen/(.*)",
-      "destination": "https://aiker-agent-lumen-scout.vercel.app/$1"
+      "source": "/api-lumen/:path*",
+      "destination": "https://aiker-agent-lumen-scout.vercel.app/:path*"
     },
     {
-      "source": "/api-stripe/(.*)",
-      "destination": "https://aiker-agent-stripe-settle.vercel.app/$1"
+      "source": "/api-stripe/:path*",
+      "destination": "https://aiker-agent-stripe-settle.vercel.app/:path*"
     },
     {
-      "source": "/api-orbit/(.*)",
-      "destination": "https://aiker-agent-orbit.vercel.app/$1"
+      "source": "/api-orbit/:path*",
+      "destination": "https://aiker-agent-orbit.vercel.app/:path*"
     },
     {
       "source": "/api/(.*)",
